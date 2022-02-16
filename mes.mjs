@@ -9,10 +9,7 @@ packageJson = JSON.parse(packageJson)
 
 // Commander
 const program = new Command()
-program
-	.name('string-util')
-	.description('Monogram Env Sync (`mes`) CLI')
-	.version(packageJson.version)
+program.name('mes').description('Monogram Env Sync (`mes`) CLI').version(packageJson.version)
 program
 	.option(
 		'-i, --init <orgId> <apikey>',

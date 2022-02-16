@@ -18,7 +18,8 @@ program
 		'-i, --init <orgId> <apikey>',
 		'Initialize a new environment file as ".env.local" using the provided org ID and API key'
 	)
-	.option('-ef, --env-file <filename>', 'Path to .env file', '.env.local')
+	.option('-e, --env-file <filename>', 'Path to .env file', '.env.local')
+	.option('-s, --sync', 'Sync the .env file to the environment with the server')
 program.parse()
 
 // START HERE

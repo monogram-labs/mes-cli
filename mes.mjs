@@ -2,6 +2,10 @@
 
 import { Command } from 'commander'
 import { $, argv, cd, chalk, fs, fetch } from 'zx'
+import { DateTime } from 'luxon'
+
+import { backupCurrentEnvFile, writeNewEnvFile } from './sync/file.mjs'
+
 $.verbose = false
 
 let packageJson = await fs.readFile('./package.json')
@@ -23,7 +27,7 @@ program
 program
 	.command('sync')
 	.description('Sync the local environment file with the remote environment file')
-	.option('-e, --env-file <filename>', 'Path to .env file', '.env.local')
+	.option('-e, --env-file <filename>', 'Path to .env fgduegh dile', '.env.local')
 	.action(async () => {
 		// Parse options
 		const options = program.opts()
@@ -43,33 +47,34 @@ program
 
 		// Get the Project Variables from the API
 		const projEnvVariables = await getProjectVariables(mesApiKey, mesProjectId)
-		const latestSyncedVariable = projEnvVariables?.[0]?.content
+		const latestSyncedVariable = projEnvVariables?.[0]
 
 		// Get the current environment variables from the file system
-		let currentEnvFileFS = await fs.readFile(`./${envFileName}`, 'utf8', function (err, data) {
-			return data.toString()
-		})
+		// let currentEnvFileFS = await fs.readFile(`./${envFileName}`, 'utf8', function (err, data) {
+		// 	return data.toString()
+		// })
 
-		// Make a copy of the current environment variables
-		fs.copyFile(`./${envFileName}`, `./${envFileName}.bak`, (err) => {
-			if (err) console.log('Error making a backup of the current envrionment variable: ', err)
-		})
+		// ------------------------------------------------------------
+		const remoteLatestUpdatedAt = DateTime.fromJSDate(new Date(latestSyncedVariable.updatedAt))
 
-		// Write the new environment variables to the file system
-		let newEnvFile = `### MES - NOSYNC ###
-MES_API_KEY=${mesApiKey}
-MES_PROJECT_ID=${mesProjectId}
-LAST_UPDATE=${new Date().toISOString()}
-### MES - NOSYNC ###
+		let localFileUpdatedAt = envFileLines
+			.find((line) => line.startsWith('LAST_UPDATE'))
+			.split('=')[1]
+		localFileUpdatedAt = DateTime.fromJSDate(new Date(localFileUpdatedAt))
 
-${latestSyncedVariable}`
+		// ------------------------------------------------------------
 
-		fs.writeFile(`./${envFileName}`, newEnvFile, (err) => {
-			if (err) console.log('Error writing new file: ', err)
-		})
+		// Is the local file updated before remote
+		if (localFileUpdatedAt < remoteLatestUpdatedAt) {
+			// Make a copy of the current environment variables
+			backupCurrentEnvFile(envFileName)
 
-		// currentEnvFile = currentEnvFileFS
-		console.log('latestSyncedVariable', latestSyncedVariable)
+			// Write the new environment variables to the file system
+			writeNewEnvFile(envFileName, mesApiKey, mesProjectId, latestSyncedVariable?.content)
+			return console.log(chalk.green('✅ Changes detected. Local file synced.'))
+		} else {
+			return console.log(chalk.blue('ℹ️ Local file is updated before remote, no need to sync.'))
+		}
 	})
 
 program.parse()

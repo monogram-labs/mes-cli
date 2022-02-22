@@ -7,6 +7,8 @@ import { DateTime } from 'luxon'
 import { initNewFile, backupCurrentEnvFile, writeNewEnvFile } from './sync/file.mjs'
 
 $.verbose = false
+const HOST = 'http://localhost:4000'
+// const HOST = 'https://monogram-env-sync.ue.r.appspot.com'
 
 let packageJson = await fs.readFile('./package.json')
 packageJson = JSON.parse(packageJson)
@@ -145,7 +147,7 @@ async function readEnvFile(envFileName) {
 }
 
 async function getProjectVariables(apiKey, projectId) {
-	let resp = await fetch(`http://localhost:4000/project/${projectId}`, {
+	let resp = await fetch(`${HOST}/project/${projectId}`, {
 		headers: {
 			'X-Api-Key': apiKey
 		}
@@ -203,7 +205,7 @@ function prepareToSaveEnvVar(envVarArr) {
 }
 
 async function pushUpdatesToRemoteServer(apiKey, projectId, newVarUpdates) {
-	fetch(`http://localhost:4000/env`, {
+	fetch(`${HOST}/env`, {
 		method: 'POST',
 		headers: {
 			'X-Api-Key': apiKey,

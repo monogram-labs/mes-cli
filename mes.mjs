@@ -4,7 +4,7 @@ import { Command } from 'commander'
 import { $, argv, cd, chalk, fs, fetch } from 'zx'
 import { DateTime } from 'luxon'
 
-import { backupCurrentEnvFile, writeNewEnvFile } from './sync/file.mjs'
+import { initNewFile, backupCurrentEnvFile, writeNewEnvFile } from './sync/file.mjs'
 
 $.verbose = false
 
@@ -17,17 +17,38 @@ program.name('mes').description('Monogram Env Sync (`mes`) CLI').version(package
 
 program
 	.command('init')
-	.description('Initialize a new project')
+	.description('Initialize a new project. (Use single quotes to wrap your project id and api key.)')
 	.argument('<orgId>', 'Organization ID')
 	.argument('<apikey>', "Organization's API Key")
+	.option('-e, --env-file <filename>', 'Path to .env', '.env.local')
 	.action(async (orgId, apikey) => {
-		console.log(orgId, apikey)
+		const options = program.opts()
+		const envFileName = options.envFile || '.env.local'
+
+		const envFile = await fs
+			.readFile(envFileName)
+			.then(() => {
+				console.log(chalk.red(`Project already initialized into: ${envFileName}.`))
+				process.exit(1)
+			})
+			.catch(async () => {
+				// This will return undefined; we can use that to check if the file exists
+			})
+
+		if (envFile === undefined) {
+			console.log('Initializing project...')
+			const newProject = await initNewFile(envFileName, apikey, 'the project name', orgId, 'gitUrl')
+
+			console.log(
+				chalk.green(`✅ Initialized "${newProject.name}" with the project ID "${newProject.id}."`)
+			)
+		}
 	})
 
 program
 	.command('sync')
 	.description('Sync the local environment file with the remote environment file')
-	.option('-e, --env-file <filename>', 'Path to .env fgduegh dile', '.env.local')
+	.option('-e, --env-file <filename>', 'Path to .env', '.env.local')
 	// .option('-u --up', 'Sync up to the server', false)
 	.action(async () => {
 		// Parse options
@@ -64,7 +85,7 @@ program
 program
 	.command('push')
 	.description('Push only the environment file to the remote environment.')
-	.option('-e, --env-file <filename>', 'Path to .env fgduegh dile', '.env.local')
+	.option('-e, --env-file <filename>', 'Path to .env', '.env.local')
 	.action(async () => {
 		const options = program.opts()
 		const envFileName = options.envFile || '.env.local'
@@ -182,7 +203,6 @@ function prepareToSaveEnvVar(envVarArr) {
 }
 
 async function pushUpdatesToRemoteServer(apiKey, projectId, newVarUpdates) {
-	console.log(apiKey, projectId)
 	fetch(`http://localhost:4000/env`, {
 		method: 'POST',
 		headers: {

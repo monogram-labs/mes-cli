@@ -2,7 +2,7 @@ import { fs, fetch } from 'zx'
 import { DateTime } from 'luxon'
 
 const HOST = 'http://localhost:4000'
-// const HOST = 'https://monogram-env-sync.ue.r.appspot.com'
+// const HOST = 'https://api.mes.monogram.dev'
 
 function backupCurrentEnvFile(envFileName) {
 	// Make a copy of the current environment variables

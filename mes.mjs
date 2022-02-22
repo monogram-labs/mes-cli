@@ -8,7 +8,7 @@ import { initNewFile, backupCurrentEnvFile, writeNewEnvFile } from './sync/file.
 
 $.verbose = false
 const HOST = 'http://localhost:4000'
-// const HOST = 'https://monogram-env-sync.ue.r.appspot.com'
+// const HOST = 'https://api.mes.monogram.dev'
 
 let packageJson = await fs.readFile('./package.json')
 packageJson = JSON.parse(packageJson)

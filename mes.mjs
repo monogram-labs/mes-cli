@@ -28,40 +28,21 @@ program
 	.command('sync')
 	.description('Sync the local environment file with the remote environment file')
 	.option('-e, --env-file <filename>', 'Path to .env fgduegh dile', '.env.local')
+	// .option('-u --up', 'Sync up to the server', false)
 	.action(async () => {
 		// Parse options
 		const options = program.opts()
 		const envFileName = options.envFile || '.env.local'
 
-		// Read the local environment file
-		const envFile = await readEnvFile(envFileName)
-		const envFileLines = envFile.split('\n')
-
-		// Get the Project ID
-		const mesProjectId = envFileLines
-			.find((line) => line.startsWith('MES_PROJECT_ID'))
-			.split('=')[1]
-
-		// Get the API Key
-		const mesApiKey = envFileLines.find((line) => line.startsWith('MES_API_KEY')).split('=')[1]
+		const { mesProjectId, mesApiKey, updatedAt: fileUpdatedAt } = await getConfig(envFileName)
 
 		// Get the Project Variables from the API
 		const projEnvVariables = await getProjectVariables(mesApiKey, mesProjectId)
 		const latestSyncedVariable = projEnvVariables?.[0]
 
-		// Get the current environment variables from the file system
-		// let currentEnvFileFS = await fs.readFile(`./${envFileName}`, 'utf8', function (err, data) {
-		// 	return data.toString()
-		// })
-
 		// ------------------------------------------------------------
 		const remoteLatestUpdatedAt = DateTime.fromJSDate(new Date(latestSyncedVariable.updatedAt))
-
-		let localFileUpdatedAt = envFileLines
-			.find((line) => line.startsWith('LAST_UPDATE'))
-			.split('=')[1]
-		localFileUpdatedAt = DateTime.fromJSDate(new Date(localFileUpdatedAt))
-
+		const localFileUpdatedAt = DateTime.fromJSDate(new Date(fileUpdatedAt))
 		// ------------------------------------------------------------
 
 		// Is the local file updated before remote
@@ -77,8 +58,65 @@ program
 		}
 	})
 
+/**
+ * Write the new environment variables to the remote server
+ */
+program
+	.command('push')
+	.description('Push only the environment file to the remote environment.')
+	.option('-e, --env-file <filename>', 'Path to .env fgduegh dile', '.env.local')
+	.action(async () => {
+		const options = program.opts()
+		const envFileName = options.envFile || '.env.local'
+		const { mesProjectId, mesApiKey } = await getConfig(envFileName)
+
+		// Read the local environment file
+		const currentEnvFileFS = await readEnvFile(envFileName)
+
+		// Get the array of environment variables
+		const envVarArr = envVarToArr(currentEnvFileFS)
+
+		// Prepare to save by removing config stuff and converting back into text
+		const newVarUpdates = prepareToSaveEnvVar(envVarArr)
+
+		pushUpdatesToRemoteServer(mesApiKey, mesProjectId, newVarUpdates)
+	})
+
 program.parse()
 
+/**
+ * Get the projectId and apiKey from the .env file
+ *
+ * @param {*} envFileName - The path to the .env file
+ * @returns
+ */
+async function getConfig(envFileName) {
+	// Read the local environment file
+	const envFile = await readEnvFile(envFileName)
+	const envFileLines = envFile.split('\n')
+
+	// Get the Project ID
+	const mesProjectId = envFileLines.find((line) => line.startsWith('MES_PROJECT_ID')).split('=')[1]
+
+	// Get the API Key
+	const mesApiKey = envFileLines.find((line) => line.startsWith('MES_API_KEY')).split('=')[1]
+
+	// Get the latest updated date and time
+	const updatedAt = envFileLines.find((line) => line.startsWith('LAST_UPDATE')).split('=')[1]
+
+	return {
+		mesProjectId,
+		mesApiKey,
+		updatedAt
+	}
+}
+
+/**
+ * Get the current environment variables from the file system
+ *
+ * @param {*} envFileName - The path to the .env file
+ * @returns
+ */
 async function readEnvFile(envFileName) {
 	return await (
 		await $`cat ${envFileName}`
@@ -98,4 +136,82 @@ async function getProjectVariables(apiKey, projectId) {
 
 		return response.envContent
 	}
+}
+
+/**
+ * Convert env file to array
+ * @param {*} envVar the raw enviroment variable text
+ * @returns
+ */
+function envVarToArr(envVar) {
+	return envVar.split('\n').map((line) =>
+		line.split('=').map((item) => {
+			return item.trim()
+		})
+	)
+}
+
+/**
+ * Convert the enviroment variable array to a string to be saved to the remote server
+ *
+ * @param {Arr} envVarArr - enviroment variable array
+ * @returns
+ */
+function prepareToSaveEnvVar(envVarArr) {
+	const filteredEnvVarArr = envVarArr.filter((item) => {
+		return (
+			item[0] !== 'MES_API_KEY' &&
+			item[0] !== 'MES_PROJECT_ID' &&
+			item[0] !== 'LAST_UPDATE' &&
+			item[0].includes('NOSYNC') === false
+		)
+	})
+
+	// Remove first element if it's empty (usually a new line)
+	if (filteredEnvVarArr[0][0].length === 0) filteredEnvVarArr.shift()
+
+	// Put it back together
+	return filteredEnvVarArr
+		.map((line) => {
+			if (line.length > 1) return `${line[0]}=${line[1]}`
+			else {
+				return line[0]
+			}
+		})
+		.join('\n')
+}
+
+async function pushUpdatesToRemoteServer(apiKey, projectId, newVarUpdates) {
+	console.log(apiKey, projectId)
+	fetch(`http://localhost:4000/env`, {
+		method: 'POST',
+		headers: {
+			'X-Api-Key': apiKey,
+			'Content-Type': 'application/json'
+		},
+		body: JSON.stringify({
+			envFileContents: newVarUpdates,
+			projectId: projectId
+		})
+	})
+		.then((response) => {
+			if (response.ok) {
+				return response.json()
+			}
+
+			return Promise.reject(response)
+		})
+		.then((result) => {
+			console.log(result)
+		})
+		.catch((error) => {
+			console.log('Something went wrong.', error)
+		})
+
+	// if (resp.ok) {
+	// 	let response = await resp.text()
+	// 	response = JSON.parse(response)
+
+	// 	return response.envContent
+	// } else console.log(resp)
 }

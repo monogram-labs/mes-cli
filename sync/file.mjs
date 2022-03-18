@@ -21,8 +21,6 @@ function backupCurrentEnvFile(envFileName) {
 function writeNewEnvFile(envFileName, mesApiKey, mesProjectId, latestSyncedVariable) {
 	// Do not modify the spacing inside this block
 	let newEnvFile = `### MES - NOSYNC ###
-MES_API_KEY=${mesApiKey}
-MES_PROJECT_ID=${mesProjectId}
 LAST_UPDATE=${DateTime.now().toISO()}
 ### MES - NOSYNC ###
 
@@ -62,8 +60,6 @@ async function initNewFile(envFileName, apiKey, projectName, orgId, gitUrl) {
 
 					// Do not modify the spacing inside this block
 					let newEnvFile = `### MES - NOSYNC ###
-MES_API_KEY=${apiKey}
-MES_PROJECT_ID=${responseJson.id}
 LAST_UPDATE=${DateTime.now().toISO()}
 ### MES - NOSYNC ###`
 

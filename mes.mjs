@@ -3,12 +3,15 @@
 import { Command } from 'commander'
 import { $, argv, cd, chalk, fs, fetch } from 'zx'
 import { DateTime } from 'luxon'
+import 'dotenv/config'
+import * as mesConfig from './mes.config.js'
 
 import { initNewFile, backupCurrentEnvFile, writeNewEnvFile } from './sync/file.mjs'
 
 $.verbose = false
-const HOST = 'http://localhost:4000'
-// const HOST = 'https://api.mes.monogram.dev'
+
+const config = mesConfig.default
+const HOST = config.apiServer ? config.apiServer : 'https://api.mes.monogram.dev'
 
 let packageJson = await fs.readFile('./package.json')
 packageJson = JSON.parse(packageJson)
@@ -19,7 +22,8 @@ program.name('mes').description('Monogram Env Sync (`mes`) CLI').version(package
 
 program
 	.command('init')
-	.description('Initialize a new project. (Use single quotes to wrap your project id and api key.)')
+	.description(`Initialize a new project. (Use single quotes to wrap your project id and api key.)`)
+	// .description('Example: mes init my-project-id abe20061-4199-4140-a4c2-1632b3b41146')
 	.argument('<orgId>', 'Organization ID')
 	.argument('<apikey>', "Organization's API Key")
 	.option('-e, --env-file <filename>', 'Path to .env', '.env.local')
@@ -119,13 +123,17 @@ async function getConfig(envFileName) {
 	const envFileLines = envFile.split('\n')
 
 	// Get the Project ID
-	const mesProjectId = envFileLines.find((line) => line.startsWith('MES_PROJECT_ID')).split('=')[1]
+	const mesProjectId = config.projectId
 
 	// Get the API Key
-	const mesApiKey = envFileLines.find((line) => line.startsWith('MES_API_KEY')).split('=')[1]
+	const mesApiKey = process.env.MES_API_KEY
 
 	// Get the latest updated date and time
-	const updatedAt = envFileLines.find((line) => line.startsWith('LAST_UPDATE')).split('=')[1]
+	const updatedAtLine = envFileLines.find((line) => {
+		if (line) return line.startsWith('LAST_UPDATE')
+	})
+
+	const updatedAt = updatedAtLine ? updatedAtLine.split('=')[1] : null
 
 	return {
 		mesProjectId,
@@ -141,6 +149,14 @@ async function getConfig(envFileName) {
  * @returns
  */
 async function readEnvFile(envFileName) {
+	if (!fs.existsSync(envFileName))
+		fs.open(envFileName, 'wx', function (err, fd) {
+			// handle error
+			fs.close(fd, function (err) {
+				// handle error
+			})
+		})
+
 	return await (
 		await $`cat ${envFileName}`
 	).stdout
@@ -182,12 +198,7 @@ function envVarToArr(envVar) {
  */
 function prepareToSaveEnvVar(envVarArr) {
 	const filteredEnvVarArr = envVarArr.filter((item) => {
-		return (
-			item[0] !== 'MES_API_KEY' &&
-			item[0] !== 'MES_PROJECT_ID' &&
-			item[0] !== 'LAST_UPDATE' &&
-			item[0].includes('NOSYNC') === false
-		)
+		if (item.length > 0) return item[0] !== 'LAST_UPDATE' && item[0].includes('NOSYNC') === false
 	})
 
 	// Remove first element if it's empty (usually a new line)

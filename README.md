@@ -14,13 +14,31 @@ npm i -g @monogram/mes-cli
 
 ### Configure
 
-1. Make sure `.env.local` is in your project directory.
-2. Make sure you have both `MES_API_KEY` and `MES_API_KEY` in your `.env.local` file. 🚨 These two settings will be skipped during syncing.
+#### Set up your API Key
+
+You add your api key in your `~/.zshrc` or `~/.bashrc`.
 
 ```
-MES_API_KEY=<monogram-env-api-key>
-MES_PROJECT_ID=<monogram-env-api-key>
+### Monogram Env Sync
+export MES_API_KEY=<org_api_key>
 ```
+
+#### Configure your project
+
+Add `mes.config.js` to your project.
+
+```js
+// Sample mes.config.js
+module.exports = {
+	projectId: '687260eb-133f-4cf5-b50d-ce7edf951d37',
+	apiServer: 'http://localhost:4000'
+}
+```
+
+| Property    | Optional? | Description                                |
+| ----------- | --------- | ------------------------------------------ |
+| `projectId` | false     | The project ID in Env Sync                 |
+| `apiServer` | true      | The API server if you're running your own. |
 
 ### Run
 

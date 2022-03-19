@@ -24,10 +24,11 @@ program
 	.command('init')
 	.description(`Initialize a new project. (Use single quotes to wrap your project id and api key.)`)
 	// .description('Example: mes init my-project-id abe20061-4199-4140-a4c2-1632b3b41146')
+	.argument('<projectName>', 'The name of the new project to intialize.')
 	.argument('<orgId>', 'Organization ID')
-	.argument('<apikey>', "Organization's API Key")
-	.option('-e, --env-file <filename>', 'Path to .env', '.env.local')
-	.action(async (orgId, apikey) => {
+	.option('-k, --api-key <apikey>', 'Path to .env', '.env.local')
+	.option('-e, --env-file <filename>', "Organization's API Key")
+	.action(async (projectName, orgId) => {
 		const options = program.opts()
 		const envFileName = options.envFile || '.env.local'
 
@@ -41,9 +42,12 @@ program
 				// This will return undefined; we can use that to check if the file exists
 			})
 
+		// Get the api key
+		const apikey = options.apiKey || process.env.MES_API_KEY
+
 		if (envFile === undefined) {
 			console.log('Initializing project...')
-			const newProject = await initNewFile(envFileName, apikey, 'the project name', orgId, 'gitUrl')
+			const newProject = await initNewFile(envFileName, apikey, projectName, orgId, 'gitUrl', HOST)
 
 			console.log(
 				chalk.green(`✅ Initialized "${newProject.name}" with the project ID "${newProject.id}."`)

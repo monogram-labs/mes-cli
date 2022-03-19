@@ -43,3 +43,6 @@ tests/e2e/results
 # Sentry
 .sentryclirc
 .env
+
+
+mes.config.js

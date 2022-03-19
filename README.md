@@ -56,3 +56,12 @@ Add to your project like
   ...
 }
 ```
+
+Maybe just add this to `package.json` instead of `mes.config.js`
+
+```js
+	"mes": {
+		"projectId": "a8504b81-05c6-4170-8d20-cb0b848c7d44",
+		"apiServer": "http://localhost:4000"
+	},
+```

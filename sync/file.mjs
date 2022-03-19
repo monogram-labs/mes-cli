@@ -1,9 +1,6 @@
 import { fs, fetch } from 'zx'
 import { DateTime } from 'luxon'
 
-const HOST = 'http://localhost:4000'
-// const HOST = 'https://api.mes.monogram.dev'
-
 function backupCurrentEnvFile(envFileName) {
 	// Make a copy of the current environment variables
 	fs.copyFile(`./${envFileName}`, `./${envFileName}.bak`, (err) => {
@@ -40,7 +37,7 @@ ${latestSyncedVariable}`
  * @param {*} orgId
  * @param {*} gitUrl
  */
-async function initNewFile(envFileName, apiKey, projectName, orgId, gitUrl) {
+async function initNewFile(envFileName, apiKey, projectName, orgId, gitUrl, HOST) {
 	return (
 		fetch(`${HOST}/project`, {
 			method: 'POST',
